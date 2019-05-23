@@ -252,11 +252,14 @@ module PDK
         module_root = PDK::Util.module_root
         sync_config_path ||= File.join(module_root, '.sync.yml') unless module_root.nil?
         config_path = File.join(@path, 'config_defaults.yml')
+        site_config_path = File.join(@path, 'config_defaults_site.yml')
 
         if @config.nil?
           conf_defaults = read_config(config_path)
+          site_config = read_config(site_config_path)
           sync_config = read_config(sync_config_path) unless sync_config_path.nil?
           @config = conf_defaults
+          @config.deep_merge!(site_config, knockout_prefix: '---') unless site_config.nil?
           @config.deep_merge!(sync_config, knockout_prefix: '---') unless sync_config.nil?
         end
         file_config = @config.fetch(:global, {})

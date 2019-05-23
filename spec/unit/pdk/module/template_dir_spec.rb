@@ -32,6 +32,14 @@ describe PDK::Module::TemplateDir do
     EOS
   end
 
+  let(:config_defaults_site) do
+    <<-EOS
+      foo:
+        attr:
+          - val: 2
+    EOS
+  end
+
   before(:each) do
     allow(PDK::Util::Git).to receive(:work_tree?).with(path_or_url).and_return(false)
     allow(PDK::Util::Git).to receive(:work_tree?).with(uri.shell_path).and_return(false)
@@ -364,10 +372,14 @@ describe PDK::Module::TemplateDir do
       allow(PDK::Util::Git).to receive(:repo?).with(path_or_url).and_return(false)
       allow(PDK::Util).to receive(:make_tmpdir_name).with('pdk-templates').and_return(tmp_path)
       allow(PDK::CLI::Exec).to receive(:git).with('clone', path_or_url, tmp_path).and_return(exit_code: 0)
-      allow(File).to receive(:file?).with(anything).and_return(File.join(path_or_url, 'config_defaults.yml')).and_return(true)
+      allow(File).to receive(:file?).with(File.join(path_or_url, 'config_defaults.yml')).and_return(File.join(path_or_url, 'config_defaults.yml')).and_return(true)
       allow(File).to receive(:read).with(File.join(path_or_url, 'config_defaults.yml')).and_return(config_defaults)
       allow(File).to receive(:readable?).with(File.join(path_or_url, 'config_defaults.yml')).and_return(true)
       allow(YAML).to receive(:safe_load).with(config_defaults, [], [], true).and_return config_hash
+      allow(File).to receive(:file?).with(File.join(path_or_url, 'config_defaults_site.yml')).and_return(File.join(path_or_url, 'config_defaults_site.yml')).and_return(true)
+      allow(File).to receive(:read).with(File.join(path_or_url, 'config_defaults_site.yml')).and_return(config_defaults_site)
+      allow(File).to receive(:readable?).with(File.join(path_or_url, 'config_defaults_site.yml')).and_return(true)
+      allow(YAML).to receive(:safe_load).with(config_defaults_site, [], [], true).and_return config_site_hash
     end
 
     context 'when the module has a valid .sync.yml file' do
@@ -394,6 +406,9 @@ describe PDK::Module::TemplateDir do
       let(:config_hash) do
         YAML.load(config_defaults) # rubocop:disable Security/YAMLLoad
       end
+      let(:config_site_hash) do
+        YAML.load(config_defaults_site) # rubocop:disable Security/YAMLLoad
+      end
 
       before(:each) do
         allow(File).to receive(:file?).with('/path/to/module/.sync.yml').and_return(true)
@@ -407,7 +422,7 @@ describe PDK::Module::TemplateDir do
         expect(template_dir.config_for(path_or_url)).to eq('module_metadata' => module_metadata,
                                                            'appveyor.yml'    => { 'environment' => { 'PUPPET_GEM_VERSION' => '~> 5.0' } },
                                                            '.travis.yml'     => { 'extras' => [{ 'rvm' => '2.1.9' }] },
-                                                           'foo'             => { 'attr' => [{ 'val' => 1 }, { 'val' => 3 }] },
+                                                           'foo'             => { 'attr' => [{ 'val' => 1 }, { 'val' => 2 }, { 'val' => 3 }] },
                                                            '.project'        => { 'delete' => true },
                                                            '.gitlab-ci.yml'  => { 'unmanaged' => true })
       end
@@ -455,7 +470,7 @@ describe PDK::Module::TemplateDir do
           expect(template_dir.config_for(path_or_url)).to eq('module_metadata' => module_metadata,
                                                              'appveyor.yml'    => { 'environment' => { 'PUPPET_GEM_VERSION' => '~> 5.0' } },
                                                              '.travis.yml'     => { 'extras' => [{ 'rvm' => '2.1.9' }] },
-                                                             'foo'             => { 'attr' => [{ 'val' => 1 }, { 'val' => 3 }], 'ko' => ['valid'] },
+                                                             'foo'             => { 'attr' => [{ 'val' => 1 }, { 'val' => 2 }, { 'val' => 3 }], 'ko' => ['valid'] },
                                                              '.project'        => { 'delete' => true },
                                                              '.gitlab-ci.yml'  => { 'unmanaged' => true })
         end
@@ -473,6 +488,10 @@ describe PDK::Module::TemplateDir do
 
       let(:config_hash) do
         YAML.load(config_defaults) # rubocop:disable Security/YAMLLoad
+      end
+
+      let(:config_site_hash) do
+        YAML.load(config_defaults_site) # rubocop:disable Security/YAMLLoad
       end
 
       before(:each) do
